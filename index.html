@@ -2,121 +2,310 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Point Zero: Лаборатория Новой Физики</title>
+    <title>Лаборатория Новой Физики</title>
     <style>
         :root {
             --bg: #000000;
-            --panel: rgba(10, 15, 20, 0.9);
+            --panel: rgba(5, 10, 15, 0.85);
+            --panel-border: rgba(0, 255, 157, 0.3);
             --text: #00ff9d;
             --accent: #ff0055;
-            --grid: #1a1a1a;
+            --text-dim: #8899a6;
+            --highlight: #00ccff;
         }
-        body { margin: 0; overflow: hidden; background: var(--bg); font-family: 'Courier New', monospace; color: var(--text); }
+        body { margin: 0; overflow: hidden; background: var(--bg); font-family: 'Courier New', monospace; color: var(--text); user-select: none; }
         
         /* Layout */
-        #container { position: relative; width: 100vw; height: 100vh; display: flex; }
-        canvas { display: block; }
+        #container { position: relative; width: 100vw; height: 100vh; }
+        canvas { display: block; width: 100%; height: 100%; }
         
-        /* Sidebar UI */
+        /* --- LEFT SIDEBAR --- */
         #sidebar {
-            width: 350px;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 300px;
+            max-height: calc(100vh - 40px);
             background: var(--panel);
-            border-right: 1px solid var(--text);
-            padding: 20px;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 15px;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
-            gap: 15px;
-            z-index: 10;
+            gap: 12px;
+            z-index: 100;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.3s;
             overflow-y: auto;
+            overflow-x: hidden;
         }
 
-        h1 { font-size: 18px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid var(--text); padding-bottom: 10px; }
-        h2 { font-size: 14px; margin: 15px 0 5px 0; color: #fff; opacity: 0.8; }
+        #sidebar.collapsed {
+            transform: translateX(-320px);
+            opacity: 0;
+            pointer-events: none;
+        }
 
-        .control-group { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 4px; }
-        label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
-        input[type=range] { width: 100%; cursor: pointer; accent-color: var(--text); }
-        
-        .data-display { font-size: 11px; line-height: 1.6; color: #aaa; }
+        #toggle-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 101;
+            background: var(--panel);
+            border: 1px solid var(--panel-border);
+            color: var(--text);
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.2s;
+            backdrop-filter: blur(5px);
+        }
+        #toggle-btn:hover { background: var(--text); color: #000; box-shadow: 0 0 15px var(--text); }
+
+        h1 { font-size: 16px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid var(--panel-border); padding-bottom: 8px; color: #fff; }
+        h2 { font-size: 13px; margin: 10px 0 5px 0; color: #fff; opacity: 0.9; font-weight: bold; }
+
+        .control-group { background: rgba(255,255,255,0.03); padding: 10px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); }
+        label { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px; color: var(--text-dim); }
+        input[type=range] { width: 100%; cursor: pointer; accent-color: var(--text); height: 4px; background: #333; border-radius: 2px; appearance: none; }
+        input[type=range]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; background: var(--text); border-radius: 50%; cursor: pointer; }
+
+        .data-display { font-size: 11px; line-height: 1.8; color: var(--text-dim); background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; font-family: monospace; }
         .data-value { color: var(--text); font-weight: bold; float: right; }
 
-        button {
+        button.action-btn {
             background: transparent; border: 1px solid var(--accent); color: var(--accent);
-            padding: 10px; width: 100%; cursor: pointer; font-family: inherit; font-weight: bold;
-            text-transform: uppercase; transition: 0.2s; margin-top: 5px;
+            padding: 8px; width: 100%; cursor: pointer; font-family: inherit; font-size: 11px; font-weight: bold;
+            text-transform: uppercase; transition: 0.2s; border-radius: 4px; margin-top: 4px;
         }
-        button:hover { background: var(--accent); color: #fff; box-shadow: 0 0 15px var(--accent); }
+        button.action-btn:hover { background: var(--accent); color: #fff; box-shadow: 0 0 10px var(--accent); }
 
-        /* Graph Canvas inside sidebar */
-        #graphCanvas { width: 100%; height: 100px; background: #000; border: 1px solid #333; margin-top: 5px; }
+        #graphCanvas { width: 100%; height: 80px; background: rgba(0,0,0,0.5); border: 1px solid #333; border-radius: 4px; margin-top: 5px; }
+        .legend { font-size: 9px; margin-top: 5px; display: flex; gap: 10px; color: var(--text-dim); }
+        .dot { width: 6px; height: 6px; display: inline-block; border-radius: 50%; margin-right: 4px; }
+        .footer-info { margin-top: auto; font-size: 9px; color: #445566; border-top: 1px solid #223344; padding-top: 8px; text-align: center; }
+        #sidebar::-webkit-scrollbar { width: 6px; }
+        #sidebar::-webkit-scrollbar-track { background: transparent; }
+        #sidebar::-webkit-scrollbar-thumb { background: #334455; border-radius: 3px; }
 
-        .legend { font-size: 10px; margin-top: 5px; display: flex; gap: 10px; }
-        .dot { width: 8px; height: 8px; display: inline-block; border-radius: 50%; }
+        /* --- BOTTOM BANNER --- */
+        #bottom-banner {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 900px;
+            background: rgba(5, 10, 15, 0.9);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.6);
+            transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #bottom-banner.collapsed {
+            padding: 0;
+            height: 40px;
+            width: auto;
+            min-width: 200px;
+        }
+        
+        #bottom-banner.collapsed .banner-content {
+            opacity: 0;
+            height: 0;
+            overflow: hidden;
+        }
+
+        .banner-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: rgba(0, 255, 157, 0.05);
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .banner-title {
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--highlight);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .banner-toggle {
+            font-size: 16px;
+            color: var(--text-dim);
+            transition: transform 0.3s;
+        }
+        #bottom-banner:not(.collapsed) .banner-toggle { transform: rotate(180deg); }
+
+        .banner-content {
+            padding: 15px 20px;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #ccc;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            opacity: 1;
+            transition: opacity 0.3s;
+        }
+
+        .banner-col h3 {
+            margin: 0 0 8px 0;
+            font-size: 11px;
+            color: var(--text);
+            text-transform: uppercase;
+            border-left: 2px solid var(--accent);
+            padding-left: 8px;
+        }
+
+        .banner-col ul {
+            margin: 0;
+            padding-left: 15px;
+            list-style-type: square;
+        }
+        .banner-col li { margin-bottom: 4px; }
+        .highlight { color: var(--highlight); font-weight: bold; }
+
+        @media (max-width: 768px) {
+            .banner-content { grid-template-columns: 1fr; }
+            #bottom-banner { width: 95%; bottom: 10px; }
+        }
     </style>
 </head>
 <body>
 
 <div id="container">
+    <!-- Кнопка сайдбара -->
+    <button id="toggle-btn" title="Показать/Скрыть панель">[_]</button>
+
+    <!-- Левая панель -->
     <div id="sidebar">
         <h1>Point Zero Lab</h1>
-        <div style="font-size: 11px; color: #888;">Теория: Эмерджентная геометрия без гравитации.</div>
+        <div style="font-size: 10px; color: #667788; margin-bottom: 5px;">Модель: Эмерджентная геометрия (G=0)</div>
 
         <div class="control-group">
-            <h2>Параметры Вселенной</h2>
+            <h2>Параметры</h2>
             <label>Агенты: <span id="val-count">400</span></label>
             <input type="range" id="inp-count" min="50" max="1000" value="400">
-            
-            <label>Диффузия поля: <span id="val-diff">0.94</span></label>
+            <label>Диффузия: <span id="val-diff">0.94</span></label>
             <input type="range" id="inp-diff" min="0.80" max="0.99" step="0.001" value="0.94">
-            
             <label>Чувствительность: <span id="val-sense">0.08</span></label>
             <input type="range" id="inp-sense" min="0.01" max="0.3" step="0.001" value="0.08">
-            
-            <label>Жесткость (Геометрия): <span id="val-stiff">0.05</span></label>
+            <label>Жесткость: <span id="val-stiff">0.05</span></label>
             <input type="range" id="inp-stiff" min="0.01" max="0.2" step="0.001" value="0.05">
         </div>
 
         <div class="control-group">
-            <h2>Телеметрия (Доказательство)</h2>
+            <h2>Телеметрия</h2>
             <div class="data-display">
-                Энтропия системы: <span id="stat-entropy" class="data-value">0.00</span><br>
-                Кинетическая энергия: <span id="stat-energy" class="data-value">0.00</span><br>
-                Коэф. кластеризации: <span id="stat-cluster" class="data-value">0.00</span><br>
+                Энтропия: <span id="stat-entropy" class="data-value">0.00</span><br>
+                Энергия: <span id="stat-energy" class="data-value">0.00</span><br>
+                Порядок: <span id="stat-cluster" class="data-value">0.00</span><br>
                 FPS: <span id="stat-fps" class="data-value">0</span>
             </div>
             <canvas id="graphCanvas"></canvas>
             <div class="legend">
-                <span><span class="dot" style="background:#00ff9d"></span> Энергия</span>
-                <span><span class="dot" style="background:#ff0055"></span> Энтропия</span>
+                <span><span class="dot" style="background:#00ff9d"></span>E</span>
+                <span><span class="dot" style="background:#ff0055"></span>S</span>
             </div>
         </div>
 
-        <button id="btn-reset">Перезапуск Сингулярности</button>
-        <button id="btn-perturb">Внешнее Возмущение</button>
+        <button class="action-btn" id="btn-reset">Перезапуск</button>
+        <button class="action-btn" id="btn-perturb">Возмущение</button>
         
-        <div style="margin-top: auto; font-size: 10px; color: #555; border-top: 1px solid #333; padding-top: 10px;">
-            Статус: <span style="color:#0f0">● Активно</span><br>
-            Модель: Reaction-Diffusion + Geometric Constraints<br>
-            Гравитация: OFF
+        <div class="footer-info">
+            Status: <span style="color:#0f0">● ONLINE</span><br>
+            Gravity: OFF | Topology: Toroidal
         </div>
     </div>
+
+    <!-- Нижний баннер с описанием -->
+    <div id="bottom-banner">
+        <div class="banner-header" onclick="toggleBanner()">
+            <div class="banner-title">
+                <span>ⓘ</span> Теория Point Zero: Что открывает новая физика?
+            </div>
+            <div class="banner-toggle">^</div>
+        </div>
+        <div class="banner-content">
+            <div class="banner-col">
+                <h3>Суть теории</h3>
+                <p>Мы отказались от <span class="highlight">гравитации</span> и абсолютного пространства. В этой модели пространство — это активное поле концентрации, а движение возникает из стремления системы к локальному равновесию.</p>
+                <p>Частицы не притягиваются силой, они следуют за <span class="highlight">градиентами информации</span>, оставляемыми другими агентами.</p>
+            </div>
+            <div class="banner-col">
+                <h3>Доказательства</h3>
+                <ul>
+                    <li><span class="highlight">Самоорганизация:</span> Хаос спонтанно превращается в упорядоченные потоки и вихри без внешнего управления.</li>
+                    <li><span class="highlight">Устойчивость:</span> Система восстанавливает структуру после любых возмущений (попробуйте кнопку "Возмущение").</li>
+                    <li><span class="highlight">Эмерджентность:</span> Сложное поведение рождается из простейших локальных правил.</li>
+                </ul>
+            </div>
+            <div class="banner-col">
+                <h3>Новые возможности</h3>
+                <ul>
+                    <li>Моделирование роевого интеллекта без центрального процессора.</li>
+                    <li>Создание материалов с <span class="highlight">программируемой формой</span>.</li>
+                    <li>Понимание биологических процессов (морфогенез) как чистой геометрии.</li>
+                    <li>Альтернативный взгляд на темную материю как на свойство самого поля.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <canvas id="simCanvas"></canvas>
 </div>
 
 <script>
-/**
- * POINT ZERO ENGINE
- * Реализация новой физики:
- * 1. Пространство - дискретное поле концентраций.
- * 2. Время - дискретные шаги.
- * 3. Силы отсутствуют. Есть только градиенты и геометрические ограничения.
- */
 
 const canvas = document.getElementById('simCanvas');
 const ctx = canvas.getContext('2d', { alpha: false });
 const graphCanvas = document.getElementById('graphCanvas');
 const graphCtx = graphCanvas.getContext('2d');
+const sidebar = document.getElementById('sidebar');
+const toggleBtn = document.getElementById('toggle-btn');
+const banner = document.getElementById('bottom-banner');
+
+let isSidebarVisible = true;
+
+// Toggle Sidebar
+toggleBtn.addEventListener('click', () => {
+    isSidebarVisible = !isSidebarVisible;
+    if (isSidebarVisible) {
+        sidebar.classList.remove('collapsed');
+        toggleBtn.innerHTML = '[_]';
+        toggleBtn.title = "Скрыть панель";
+    } else {
+        sidebar.classList.add('collapsed');
+        toggleBtn.innerHTML = '[+]';
+        toggleBtn.title = "Показать панель";
+    }
+});
+
+// Toggle Banner
+function toggleBanner() {
+    banner.classList.toggle('collapsed');
+}
 
 // Конфигурация
 const config = {
@@ -124,21 +313,19 @@ const config = {
     diffusion: 0.94,
     sensitivity: 0.08,
     stiffness: 0.05,
-    gridScale: 5, // Разрешение поля
+    gridScale: 5,
     decay: 0.02
 };
 
 let width, height, cols, rows;
-let field; // Float32Array для производительности
+let field; 
 let particles = [];
 let history = { energy: [], entropy: [] };
 let lastTime = 0;
 let frameCount = 0;
 
-// Инициализация
 function resize() {
-    const sidebarWidth = document.getElementById('sidebar').offsetWidth;
-    width = window.innerWidth - sidebarWidth;
+    width = window.innerWidth;
     height = window.innerHeight;
     canvas.width = width;
     canvas.height = height;
@@ -147,9 +334,8 @@ function resize() {
     rows = Math.ceil(height / config.gridScale);
     
     field = new Float32Array(cols * rows).fill(0);
-    
-    graphCanvas.width = document.getElementById('sidebar').offsetWidth - 40;
-    graphCanvas.height = 100;
+    graphCanvas.width = 260; 
+    graphCanvas.height = 80;
 }
 
 class Particle {
@@ -161,14 +347,11 @@ class Particle {
         this.vx = Math.cos(angle) * speed;
         this.vy = Math.sin(angle) * speed;
         this.radius = 3;
-        // Цвет зависит от начальной скорости (визуализация разнообразия)
         const hue = 140 + (speed * 20); 
         this.color = `hsl(${hue}, 100%, 60%)`;
     }
 
     update() {
-        // 1. Восприятие поля (Градиентный спуск/подъем)
-        // Агент сравнивает концентрацию слева и справа от вектора движения
         const sensorDist = 12;
         const angle = Math.atan2(this.vy, this.vx);
         
@@ -181,27 +364,22 @@ class Particle {
         const valR = this.getField(rx, ry);
         const valC = this.getField(this.x, this.y);
 
-        // Логика поведения: идти туда, где больше "информации" (концентрации)
         let turn = 0;
         if (valL > valR && valL > valC) turn = -config.sensitivity;
         else if (valR > valL && valR > valC) turn = config.sensitivity;
-        else if (valC < valL && valC < valR) turn = (Math.random() - 0.5) * 0.5; // Блуждание в пустоте
+        else if (valC < valL && valC < valR) turn = (Math.random() - 0.5) * 0.5;
 
-        // Поворот вектора скорости
         const speed = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
         const newAngle = angle + turn;
         this.vx = Math.cos(newAngle) * speed;
         this.vy = Math.sin(newAngle) * speed;
 
-        // 2. Геометрическое ограничение (Столкновения)
-        // Упрощенная проверка соседей (для демо O(N^2) допустимо при N<1000)
-        // В продакшене здесь был бы Spatial Hash Grid
         for (let other of particles) {
             if (other === this) continue;
             const dx = this.x - other.x;
             const dy = this.y - other.y;
             const distSq = dx*dx + dy*dy;
-            const minDist = (this.radius + other.radius) * 1.5; // Буфер
+            const minDist = (this.radius + other.radius) * 1.5; 
             
             if (distSq < minDist * minDist && distSq > 0) {
                 const dist = Math.sqrt(distSq);
@@ -215,7 +393,6 @@ class Particle {
                 other.x -= nx * force;
                 other.y -= ny * force;
                 
-                // Обмен импульсом (упрощенно)
                 this.vx += nx * 0.1;
                 this.vy += ny * 0.1;
                 other.vx -= nx * 0.1;
@@ -223,17 +400,14 @@ class Particle {
             }
         }
 
-        // 3. Движение
         this.x += this.vx;
         this.y += this.vy;
 
-        // Тороидальная топология (мир без границ)
         if (this.x < 0) this.x = width;
         if (this.x > width) this.x = 0;
         if (this.y < 0) this.y = height;
         if (this.y > height) this.y = 0;
 
-        // 4. Генерация поля (Оставление следа)
         this.deposit();
     }
 
@@ -260,19 +434,14 @@ class Particle {
     }
 }
 
-// Физическое ядро: Обновление поля (Диффузия + Затухание)
 function updateField() {
     const nextField = new Float32Array(cols * rows);
     const len = field.length;
     
-    // Оптимизированный проход
     for (let i = 0; i < len; i++) {
         let val = field[i];
-        
-        // Затухание
         val *= config.diffusion;
         
-        // Диффузия (соседи: верх, низ, лево, право)
         const r = Math.floor(i / cols);
         const c = i % cols;
         
@@ -294,8 +463,6 @@ function updateField() {
 }
 
 function drawField() {
-    // Прямая манипуляция пикселями была бы быстрее, но fillRect проще для понимания кода
-    // Для оптимизации рисуем только если значение > порога
     for (let i = 0; i < field.length; i++) {
         const val = field[i];
         if (val > 0.02) {
@@ -304,7 +471,6 @@ function drawField() {
             const x = c * config.gridScale;
             const y = r * config.gridScale;
             
-            // Цветовая карта: от темно-синего к ярко-зеленому
             const g = Math.floor(val * 255);
             const b = Math.floor(val * 100);
             ctx.fillStyle = `rgba(0, ${g}, ${b}, ${val})`;
@@ -313,7 +479,6 @@ function drawField() {
     }
 }
 
-// Аналитика и Телеметрия
 function calculateMetrics() {
     let totalEnergy = 0;
     let totalConcentration = 0;
@@ -328,14 +493,9 @@ function calculateMetrics() {
         concentrationSqSum += val * val;
     }
     
-    // Энтропия Шеннона (упрощенно через дисперсию концентрации)
-    // Низкая энтропия = четкие структуры, Высокая = шум
     const mean = totalConcentration / field.length;
     const variance = (concentrationSqSum / field.length) - (mean * mean);
-    const entropy = Math.max(0, variance * 100); // Нормализация
-    
-    // Кластеризация (среднее расстояние до ближайшего соседа)
-    // Упрощенно: чем выше плотность локально, тем выше коэффициент
+    const entropy = Math.max(0, variance * 100);
     
     return { energy: totalEnergy / particles.length, entropy };
 }
@@ -352,7 +512,6 @@ function drawGraph(metrics) {
     const h = graphCanvas.height;
     graphCtx.clearRect(0, 0, w, h);
     
-    // Рисуем энергию (зеленый)
     graphCtx.strokeStyle = '#00ff9d';
     graphCtx.lineWidth = 2;
     graphCtx.beginPath();
@@ -364,7 +523,6 @@ function drawGraph(metrics) {
     });
     graphCtx.stroke();
     
-    // Рисуем энтропию (красный)
     graphCtx.strokeStyle = '#ff0055';
     graphCtx.lineWidth = 2;
     graphCtx.beginPath();
@@ -377,13 +535,10 @@ function drawGraph(metrics) {
     graphCtx.stroke();
 }
 
-// Главный цикл
 function loop(timestamp) {
-    // Очистка с эффектом шлейфа
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.fillRect(0, 0, width, height);
     
-    // Шаг физики
     updateField();
     drawField();
     
@@ -392,17 +547,14 @@ function loop(timestamp) {
         p.draw();
     });
     
-    // Сбор данных каждые 10 кадров для экономии ресурсов
     if (frameCount % 10 === 0) {
         const metrics = calculateMetrics();
         document.getElementById('stat-energy').innerText = metrics.energy.toFixed(2);
         document.getElementById('stat-entropy').innerText = metrics.entropy.toFixed(2);
-        // Псевдо-кластеризация (обратная пропорциональна энтропии для демо)
         document.getElementById('stat-cluster').innerText = (1 / (metrics.entropy + 0.1)).toFixed(2);
         drawGraph(metrics);
     }
     
-    // FPS
     if (timestamp - lastTime >= 1000) {
         document.getElementById('stat-fps').innerText = frameCount;
         frameCount = 0;
@@ -423,11 +575,10 @@ function init() {
     history = { energy: [], entropy: [] };
 }
 
-// Event Listeners
+// Controls
 document.getElementById('inp-count').oninput = (e) => {
     config.particleCount = parseInt(e.target.value);
     document.getElementById('val-count').innerText = config.particleCount;
-    // Пересоздание при сильном изменении
     if (Math.abs(particles.length - config.particleCount) > 50) init();
 };
 document.getElementById('inp-diff').oninput = (e) => {
@@ -446,7 +597,6 @@ document.getElementById('inp-stiff').oninput = (e) => {
 document.getElementById('btn-reset').onclick = init;
 
 document.getElementById('btn-perturb').onclick = () => {
-    // Добавляем случайные всплески в поле
     for(let i=0; i<10; i++) {
         const cx = Math.random() * width;
         const cy = Math.random() * height;
@@ -458,13 +608,10 @@ document.getElementById('btn-perturb').onclick = () => {
         
         for(let y=rStart; y<=rEnd; y++) {
             for(let x=cStart; x<=cEnd; x++) {
-                if(x>=0 && x<cols && y>=0 && y<rows) {
-                    field[y*cols+x] += 0.8;
-                }
+                if(x>=0 && x<cols && y>=0 && y<rows) field[y*cols+x] += 0.8;
             }
         }
     }
-    // Толчок частицам
     particles.forEach(p => {
         p.vx += (Math.random()-0.5)*5;
         p.vy += (Math.random()-0.5)*5;
@@ -473,11 +620,13 @@ document.getElementById('btn-perturb').onclick = () => {
 
 window.addEventListener('resize', resize);
 window.addEventListener('mousedown', (e) => {
+    // Игнорируем клик, если он был по UI элементам
+    if (e.target.closest('#sidebar') || e.target.id === 'toggle-btn' || e.target.closest('#bottom-banner')) return;
+
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
     
-    // Клик создает мощный источник поля
     const r = 40;
     const cStart = Math.floor((mx-r)/config.gridScale);
     const cEnd = Math.floor((mx+r)/config.gridScale);
@@ -494,7 +643,6 @@ window.addEventListener('mousedown', (e) => {
     }
 });
 
-// Start
 init();
 requestAnimationFrame(loop);
 
